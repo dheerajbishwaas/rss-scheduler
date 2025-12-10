@@ -202,7 +202,13 @@ extension=intl
 php spark migrate
 ```
 
-### 6. Run Server
+### 6. Run Seed
+```
+php spark db:seed PlatformSeeder
+
+```
+
+### 7. Run Server
 ```
 php spark serve
 ```
