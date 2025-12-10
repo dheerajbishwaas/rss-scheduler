@@ -1,68 +1,252 @@
-# CodeIgniter 4 Application Starter
+# Social Media Post Automation – CodeIgniter 4
 
-## What is CodeIgniter?
+This project is a custom-built **Social Media Automation & RSS News Import System** using **CodeIgniter 4**, PHP, MySQL, and SimplePie RSS parser.  
+The system automatically imports news articles from RSS feeds, extracts images, checks character limits, assigns posts to social media platforms, and provides a dashboard to manage the workflow.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+---
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## 🚀 Features Implemented
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+### **1. RSS Fetch + Auto Import**
+The system imports posts automatically from RSS feeds such as:
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+```
+https://timesofindia.indiatimes.com/rssfeedstopstories.cms
+```
 
-## Installation & updates
+We extract:
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+- `title`
+- `content`
+- `pub_date`
+- `guid`
+- `link`
+- `image_url` *(from enclosure tag)*
+- `char_count` *(title character count)*
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+### **Image Extraction Logic**
+RSS like Times of India provides image through:
 
-## Setup
+```xml
+<enclosure type="image/jpeg" url="IMAGE_URL" />
+```
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+We save it into database column `image_url`.
 
-## Important Change with index.php
+---
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+## **2. Character Counting System**
+We calculate and store:
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+```
+char_count = strlen($title)
+```
 
-**Please** read the user guide for a better explanation of how CI4 works!
+This is used for platform validation (especially X/Twitter).
 
-## Repository Management
+---
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+## **3. X (Twitter) Character Limit Validation**
+A manual check is added to restrict assigning posts to X if the title exceeds **280 characters**:
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+```php
+if (in_array(2, $selected) && $post['char_count'] > 280) {
+    return redirect()->back()->with('error', 'Post exceeds 280 chars for X (Twitter)');
+}
+```
 
-## Server Requirements
+Where:
+- `2` = Platform ID for X/Twitter
 
-PHP version 8.1 or higher is required, with the following extensions installed:
+---
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+## **4. Platform Assignment (Modal Based UI)**
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - If you are still using PHP 7.4 or 8.0, you should upgrade immediately.
-> - The end of life date for PHP 8.1 will be December 31, 2025.
+Admin can assign each post to multiple social platforms:
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+- Facebook
+- X (Twitter)
+- Instagram
+- LinkedIn
+- TikTok
+- Threads
+- Bluesky
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+Assignments are stored in `post_platform` (pivot table).
+
+### AJAX-based modal:
+```
+openAssignModal(postId, postTitle)
+```
+
+Fetches assigned platforms dynamically and updates UI.
+
+---
+
+## **5. Dashboard with Platform Filter**
+The dashboard includes a dropdown:
+
+- **All Platforms**
+- Specific platform (e.g., X, Facebook, Instagram etc.)
+
+If a platform is selected:
+✔ Only posts assigned to that platform are shown  
+✔ Posts without assignment are excluded
+
+### Fix for SQL error:
+We added fallback when no post IDs exist:
+
+```php
+if (!empty($postIds)) {
+    ->whereIn('post_platform.post_id', $postIds);
+}
+```
+
+---
+
+## **6. Platform Tags in Dashboard Table**
+Each post shows assigned platforms as tags:
+
+```
+Facebook  |  X  | Instagram
+```
+
+We fetch all assigned platforms in controller and group them by post ID.
+
+---
+
+## **7. Priority Ordering & Sorting**
+We implemented drag-and-drop sorting using SortableJS:
+
+- Posts can be rearranged
+- Priority auto-updates in DB via AJAX
+
+---
+
+## **8. Pagination (Custom Design)**
+We replaced default CodeIgniter pagination with a custom cleaner layout:
+
+- Previous
+- 1 2 3 … N
+- Next
+- Last
+
+Supports large number of pages without listing all page numbers.
+
+---
+
+## **9. Layout System (Header + Footer Included)**
+We implemented CodeIgniter 4 layout structure using:
+
+```
+<?= $this->include('partials/header') ?>
+<?= $this->renderSection('content') ?>
+<?= $this->include('partials/footer') ?>
+```
+
+All pages now share same header/footer.
+
+---
+
+## **10. Technologies Used**
+
+- **PHP 8+**
+- **CodeIgniter 4**
+- **MySQL**
+- **SimplePie (RSS Parser)**
+- **HTML/CSS/Bootstrap**
+- **SortableJS**
+- **AJAX / Fetch API**
+
+---
+
+## ⚙ Installation Steps
+
+### 1. Clone or Download
+```
+composer create-project codeigniter4/appstarter
+```
+
+### 2. Install SimplePie
+```
+composer require simplepie/simplepie
+```
+
+### 3. Copy `.env`
+```
+cp env .env
+```
+
+Update:
+
+```
+CI_ENVIRONMENT = development
+app.baseURL = 'http://localhost:8080'
+```
+
+### 4. Enable intl extension  
+Required for CodeIgniter:
+
+Edit:
+```
+php.ini
+```
+
+Enable:
+```
+extension=intl
+```
+
+### 5. Run Migrations
+```
+php spark migrate
+```
+
+### 6. Run Server
+```
+php spark serve
+```
+
+
+## ✔ Database Tables
+
+### posts
+- id  
+- title  
+- content  
+- char_count  
+- image_url  
+- pub_date  
+- priority  
+- created_at  
+
+### platforms
+- id  
+- name  
+
+### post_platform
+- post_id  
+- platform_id  
+
+---
+
+## 🧪 Validations Implemented
+
+### Character count check (Twitter/X)
+✔ Blocks assignment if `char_count > 280`.
+
+### Duplicate GUID prevention
+✔ No duplicate RSS items.
+
+### Missing image fallback
+✔ Safety check if enclosure missing.
+
+---
+
+## 📄 License
+This project is custom and proprietary for client use.
+
+---
+
+# 🎉 Completed — Full Feature Documentation Ready
+You can directly **copy-paste** this README.md into your GitHub or project folder.
